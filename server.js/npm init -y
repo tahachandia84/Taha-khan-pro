@@ -1,0 +1,50 @@
+const express = require('express');
+const mysql = require('mysql2'); // Agar MySQL database use kar rahe hain
+const cors = require('cors');
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+
+// 1. Apne Real Database Ka Connection Yahan Set Karein
+const db = mysql.createConnection({
+    host: 'localhost',
+    user: 'root',         // Aapka DB Username
+    password: 'password', // Aapka DB Password
+    database: 'sim_db'    // Aapka Database Name
+});
+
+db.connect((err) => {
+    if (err) console.error('Database connection failed: ' + err.stack);
+    else console.log('Connected to SIM Database.');
+});
+
+// 2. Search API Endpoint
+app.get('/api/search', (req, res) => {
+    const query = req.query.target; // Frontend se number ya CNIC aayega
+
+    if (!query) {
+        return res.status(400).json({ error: "Input is required" });
+    }
+
+    // Real SQL Query: Jo number ya CNIC dono ko check karegi
+    const sql = "SELECT * FROM data_table WHERE mobile_number = ? OR cnic = ?";
+    
+    db.query(sql, [query, query], (err, results) => {
+        if (err) {
+            return res.status(500).json({ error: "Database error occurred" });
+        }
+        
+        if (results.length > 0) {
+            // Sahi data milne par frontend ko bhejen
+            res.json({
+                success: true,
+                data: results[0] // Pehla record send karein
+            });
+        } else {
+            res.status(404).json({ success: false, message: "No record found" });
+        }
+    });
+});
+
+app.listen(3000, () => console.log('Server running on port 3000'));
